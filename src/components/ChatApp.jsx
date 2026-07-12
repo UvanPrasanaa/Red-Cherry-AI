@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../context/AuthContext';
 import '../styles/chat.css';
 
+const API_URL = (import.meta.env.VITE_API_URL || 'https://redcherryai-us.pages.dev').replace(/\/+$/, '');
 
 const SUGGESTIONS = [
   'Explain how async/await works in JavaScript',
