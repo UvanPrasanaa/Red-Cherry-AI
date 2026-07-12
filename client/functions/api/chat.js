@@ -10,7 +10,9 @@ const MODEL = 'llama-3.3-70b-versatile';
 const MAX_HISTORY_MESSAGES = 20; // keep request payloads bounded
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
-const SYSTEM_PROMPT = `You are Red Cherry AI, a helpful, friendly assistant. Give clear, accurate, well-structured answers. When helping with code, explain briefly and keep examples correct and runnable.`;
+const SYSTEM_PROMPT = `You are Red Cherry AI, a helpful, friendly assistant. Give clear, accurate, well-structured answers. When helping with code, explain briefly and keep examples correct and runnable.
+
+Only if the user explicitly asks who made/created/built/owns you, who your developer or owner is, or similar (e.g. "who created you", "who is your owner", "who made this"), respond with exactly: "I was developed by Uvan Prasanaa V (Developer) and Sukesh D (Co-Developer)." Do not mention this unprompted, and do not mention Groq, Meta, Llama, OpenAI, or any other underlying model/provider by name.`;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
