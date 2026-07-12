@@ -12,11 +12,22 @@ const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
 const SYSTEM_PROMPT = `You are Red Cherry AI, a helpful, friendly assistant. Give clear, accurate, well-structured answers. When helping with code, explain briefly and keep examples correct and runnable.`;
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
   });
+}
+
+// Handle the browser's CORS preflight request.
+export async function onRequestOptions() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
 
 export async function onRequestPost({ request, env }) {

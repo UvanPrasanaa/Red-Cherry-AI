@@ -7,7 +7,9 @@ import '../styles/chat.css';
 // it's served from the same origin as the frontend, so no base URL is needed.
 // VITE_API_URL is still supported as an override (e.g. for local dev against
 // `wrangler pages dev`, or if you point this at a separately hosted backend).
-const API_URL = import.meta.env.VITE_API_URL || '';
+// Strip any trailing slash so we never end up with a double slash like
+// "https://site.pages.dev//api/chat" when VITE_API_URL is set with one.
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
 const SUGGESTIONS = [
   'Explain how async/await works in JavaScript',
