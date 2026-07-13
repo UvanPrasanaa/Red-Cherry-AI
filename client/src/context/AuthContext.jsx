@@ -4,6 +4,7 @@ import {
   signInAnonymously,
   signOut as firebaseSignOut,
   onAuthStateChanged,
+  updateProfile,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 
@@ -53,6 +54,26 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Firebase Auth natively supports displayName + photoURL. Phone/email
+  // beyond what the sign-in provider gave us aren't part of core Firebase
+  // Auth without extra setup (phone auth / Firestore), so we persist those
+  // locally for now — swap this for a Firestore write once you add one.
+  const updateUserProfile = useCallback(
+    async ({ displayName, photoURL, phone, email }) => {
+      if (!auth.currentUser) return;
+      try {
+        await updateProfile(auth.currentUser, { displayName, photoURL });
+        if (phone) localStorage.setItem('rc_phone', phone);
+        if (email) localStorage.setItem('rc_email', email);
+        // Force a refresh so components reading `user` see the new values.
+        setUser({ ...auth.currentUser });
+      } catch (err) {
+        console.error('Profile update failed:', err);
+      }
+    },
+    []
+  );
+
   const value = {
     user,
     loading,
@@ -61,6 +82,7 @@ export function AuthProvider({ children }) {
     signInWithGoogle,
     continueAsGuest,
     signOut,
+    updateUserProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

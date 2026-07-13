@@ -21,6 +21,22 @@
   gap: var(--space-3);
 }
 
+.chat-header__menu-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+
+.chat-header__menu-btn:hover {
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+}
+
 .chat-header__mark {
   width: 32px;
   height: 32px;
@@ -337,6 +353,67 @@
   border-top: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   padding: var(--space-4) var(--space-4);
+}
+
+.chat-composer__toolbar {
+  max-width: 720px;
+  margin: 0 auto var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-composer__attach-wrap {
+  position: relative;
+}
+
+.chat-composer__attach-btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  background: var(--bg-canvas);
+  transition: border-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+
+.chat-composer__attach-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.chat-composer__attach-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  z-index: 20;
+  min-width: 140px;
+}
+
+.chat-composer__attach-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.chat-composer__attach-menu button:hover {
+  background: var(--bg-canvas);
+}
+
+.chat-composer__model {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .chat-composer__inner {

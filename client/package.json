@@ -1,7 +1,7 @@
 {
   "name": "red-cherry-ai-client",
   "version": "1.0.0",
-  "description": "Red Cherry AI — a chatbot powered by Groq's Llama 3.3 70B Versatile model",
+  "description": "Red Cherry AI — a chatbot powered by Google's Gemini 3.5 Flash model",
   "private": true,
   "type": "module",
   "scripts": {

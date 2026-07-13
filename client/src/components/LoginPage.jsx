@@ -54,7 +54,7 @@ export default function LoginPage() {
             <span className="login-card__prompt">$</span> booting red-cherry-ai/core...
           </div>
           <div className="login-card__line">
-            <span className="login-card__prompt">$</span> model: llama-3.3-70b-versatile
+            <span className="login-card__prompt">$</span> model: Nemo - 1
           </div>
           <div className="login-card__line">
             <span className="login-card__prompt">$</span> awaiting authentication

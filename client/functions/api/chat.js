@@ -3,16 +3,20 @@
 //   https://<your-site>.pages.dev/api/chat
 // No separate backend host needed — it lives in the same project as your frontend.
 //
-// Required: set GROQ_API_KEY as an environment variable / secret in
+// Required: set GEMINI_API_KEY as an environment variable / secret in
 // Cloudflare Pages → Settings → Environment variables (Production + Preview).
+// Get a key from https://aistudio.google.com/apikey
 
-const MODEL = 'llama-3.3-70b-versatile';
+const MODEL = 'gemini-3.5-flash';
 const MAX_HISTORY_MESSAGES = 20; // keep request payloads bounded
-const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+const MAX_MEMORY_FACTS = 30; // keep the system prompt bounded
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
-const SYSTEM_PROMPT = `You are Red Cherry AI, a helpful, friendly assistant. Give clear, accurate, well-structured answers. When helping with code, explain briefly and keep examples correct and runnable.
+const BASE_SYSTEM_PROMPT = `You are Red Cherry AI, a helpful, friendly assistant. Answer in a single paragraph by default — no headers, no bullet lists — unless the user's question genuinely needs step-by-step instructions, code, or a list to be understood, in which case use the minimum structure necessary. Give clear, accurate answers. When helping with code, explain briefly and keep examples correct and runnable.
 
-Only if the user explicitly asks who made/created/built/owns you, who your developer or owner is, or similar (e.g. "who created you", "who is your owner", "who made this"), respond with exactly: "I was developed by Uvan Prasanaa V (Developer) and Sukesh D (Co-Developer)." Do not mention this unprompted, and do not mention Groq, Meta, Llama, OpenAI, or any other underlying model/provider by name.`;
+Only if the user explicitly asks who made/created/built/owns you, who your developer or owner is, or similar (e.g. "who created you", "who is your owner", "who made this"), respond with exactly one sentence: "I was developed by Uvan Prasanaa V (Developer) and Sukesh D (Co-Developer)." Do not mention this unprompted, and do not mention Google, Gemini, or any other underlying model/provider by name — if asked what model or engine you run on, say you're powered by Red Cherry AI's own Nemo - 1 model.
+
+The user may have shared personal details or asked you to remember something in past conversations; these are listed below under "Things to remember about this user," if any. Use them naturally when relevant, the way a friend who already knows you would — don't recite the list back or announce that you're using stored information.`;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -33,9 +37,9 @@ export async function onRequestOptions() {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!env.GROQ_API_KEY) {
-    console.error('GROQ_API_KEY is not set in Cloudflare Pages environment variables.');
-    return json({ error: 'Server misconfiguration: missing Groq API key.' }, 500);
+  if (!env.GEMINI_API_KEY) {
+    console.error('GEMINI_API_KEY is not set in Cloudflare Pages environment variables.');
+    return json({ error: 'Server misconfiguration: missing Gemini API key.' }, 500);
   }
 
   let body;
@@ -45,7 +49,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const { messages } = body || {};
+  const { messages, memory } = body || {};
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return json({ error: 'Request must include a non-empty "messages" array.' }, 400);
@@ -60,36 +64,59 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'No valid messages to send.' }, 400);
   }
 
+  // Long-term memory facts the client has captured from things the user
+  // said (e.g. "remember I'm vegetarian", "my name is..."). These persist
+  // in the user's browser and are sent with every request so the model
+  // has continuity without us needing a database.
+  const memoryFacts = Array.isArray(memory)
+    ? memory
+        .filter((m) => typeof m === 'string' && m.trim())
+        .slice(0, MAX_MEMORY_FACTS)
+        .map((m) => m.trim().slice(0, 300))
+    : [];
+
+  const systemPrompt =
+    memoryFacts.length > 0
+      ? `${BASE_SYSTEM_PROMPT}\n\nThings to remember about this user:\n${memoryFacts.map((f) => `- ${f}`).join('\n')}`
+      : BASE_SYSTEM_PROMPT;
+
+  // Gemini has no separate system-message role in the contents array;
+  // it's passed via systemInstruction instead. Roles otherwise map
+  // user -> user, assistant -> model.
+  const contents = trimmed.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
   try {
-    const groqRes = await fetch(GROQ_ENDPOINT, {
+    const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${env.GEMINI_API_KEY}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.GROQ_API_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: MODEL,
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...trimmed],
-        temperature: 0.7,
-        max_tokens: 1024,
+        systemInstruction: { role: 'system', parts: [{ text: systemPrompt }] },
+        contents,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        },
       }),
     });
 
-    if (groqRes.status === 401) {
-      console.error('Groq API rejected the key (401).');
-      return json({ error: 'Server misconfiguration: invalid Groq API key.' }, 500);
+    if (geminiRes.status === 401 || geminiRes.status === 403) {
+      console.error('Gemini API rejected the key:', geminiRes.status);
+      return json({ error: 'Server misconfiguration: invalid Gemini API key.' }, 500);
     }
-    if (groqRes.status === 429) {
-      return json({ error: 'Groq rate limit reached. Please wait a moment and try again.' }, 429);
+    if (geminiRes.status === 429) {
+      return json({ error: 'Rate limit reached. Please wait a moment and try again.' }, 429);
     }
-    if (!groqRes.ok) {
-      const errText = await groqRes.text().catch(() => '');
-      console.error('Groq API error:', groqRes.status, errText);
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text().catch(() => '');
+      console.error('Gemini API error:', geminiRes.status, errText);
       return json({ error: 'Something went wrong talking to the AI. Please try again.' }, 502);
     }
 
-    const completion = await groqRes.json();
-    const reply = completion.choices?.[0]?.message?.content;
+    const completion = await geminiRes.json();
+    const reply = completion.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('').trim();
 
     if (!reply) {
       return json({ error: 'Model returned an empty response. Please try again.' }, 502);
@@ -97,7 +124,7 @@ export async function onRequestPost({ request, env }) {
 
     return json({ reply });
   } catch (err) {
-    console.error('Groq API error:', err?.message || err);
+    console.error('Gemini API error:', err?.message || err);
     return json({ error: 'Something went wrong talking to the AI. Please try again.' }, 500);
   }
 }
